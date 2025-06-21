@@ -6,12 +6,14 @@ const char* ssid = "test";
 const char* password = "12345678";
 
 const char* firmwareUrl = "https://raw.githubusercontent.com/Adityakumar20/test_code/main/test/build/esp32.esp32.esp32/test.ino.bin";
-const char* versionUrl  = "https://raw.githubusercontent.com/Adityakumar20/test_code/main/version.txt";
-
-const char* currentVersion = "v1.0.6";
+const char* versionUrl = "https://raw.githubusercontent.com/Adityakumar20/test_code/main/version.txt";
+const char* currentVersion = "v1.0.7";  // Update this in code when you release new firmware
 
 unsigned long lastBlink = 0;
 bool ledState = false;
+
+unsigned long lastOTACheck = 0;
+const unsigned long otaInterval = 30000;  // 30 seconds
 
 void setup() {
   pinMode(2, OUTPUT);
@@ -29,8 +31,26 @@ void setup() {
     Serial.print(".");
   }
   Serial.println("\n✅ WiFi connected");
+}
 
-  // 🔍 Step 1: Check version file
+void loop() {
+  // LED Blink
+  if (millis() - lastBlink > 1000) {
+    ledState = !ledState;
+    digitalWrite(2, ledState);
+    lastBlink = millis();
+  }
+
+  // OTA version check every 30 sec
+  if (millis() - lastOTACheck > otaInterval) {
+    lastOTACheck = millis();
+    checkForUpdate();
+  }
+}
+
+void checkForUpdate() {
+  Serial.println("\n🔍 Checking for OTA update...");
+
   HTTPClient http;
   http.begin(versionUrl);
   int httpCode = http.GET();
@@ -38,63 +58,55 @@ void setup() {
   if (httpCode == HTTP_CODE_OK) {
     String newVersion = http.getString();
     newVersion.trim();
-
     Serial.println("📥 Online firmware version: " + newVersion);
 
     if (newVersion != currentVersion) {
-      Serial.println("⬆️ Update available! Starting OTA Update...");
-
-      // 🔄 Download and apply firmware
+      Serial.println("⬆️ New version found! Starting OTA update...");
       http.end();
-      http.begin(firmwareUrl);
-      int fwCode = http.GET();
-
-      if (fwCode == HTTP_CODE_OK) {
-        int contentLength = http.getSize();
-        if (Update.begin(contentLength)) {
-          WiFiClient* stream = http.getStreamPtr();
-          size_t written = Update.writeStream(*stream);
-          if (written == contentLength) {
-            Serial.println("✅ OTA written successfully.");
-          } else {
-            Serial.println("❌ OTA write incomplete.");
-          }
-
-          if (Update.end()) {
-            if (Update.isFinished()) {
-              Serial.println("🚀 OTA complete. Restarting...");
-              ESP.restart();
-            } else {
-              Serial.println("⚠️ OTA not finished properly.");
-            }
-          } else {
-            Serial.println("❌ OTA error: " + String(Update.getError()));
-          }
-
-        } else {
-          Serial.println("❌ Not enough space for OTA");
-        }
-
-      } else {
-        Serial.println("❌ Firmware download failed. HTTP code: " + String(fwCode));
-      }
-
+      doOTAUpdate();
     } else {
-      Serial.println("✅ Firmware is up-to-date. No OTA needed.");
+      Serial.println("✅ Already on latest version.");
     }
-
   } else {
-    Serial.println("❌ Version check failed. HTTP code: " + String(httpCode));
+    Serial.println("❌ Failed to fetch version.txt. Code: " + String(httpCode));
   }
 
   http.end();
 }
 
-void loop() {
-  if (millis() - lastBlink > 1250) {
-    ledState = !ledState;
-    digitalWrite(2, ledState);
-    Serial.println(String(currentVersion));
-    lastBlink = millis();
+void doOTAUpdate() {
+  HTTPClient http;
+  http.begin(firmwareUrl);
+  int httpCode = http.GET();
+
+  if (httpCode == HTTP_CODE_OK) {
+    int contentLength = http.getSize();
+    if (Update.begin(contentLength)) {
+      WiFiClient* stream = http.getStreamPtr();
+      size_t written = Update.writeStream(*stream);
+
+      if (written == contentLength) {
+        Serial.println("✅ OTA written successfully.");
+      } else {
+        Serial.println("❌ Incomplete OTA write.");
+      }
+
+      if (Update.end()) {
+        if (Update.isFinished()) {
+          Serial.println("🚀 OTA complete. Restarting...");
+          ESP.restart();
+        } else {
+          Serial.println("⚠️ OTA not finished properly.");
+        }
+      } else {
+        Serial.println("❌ OTA error: " + String(Update.getError()));
+      }
+    } else {
+      Serial.println("❌ Not enough space to OTA.");
+    }
+  } else {
+    Serial.println("❌ Failed to download firmware. Code: " + String(httpCode));
   }
+
+  http.end();
 }
