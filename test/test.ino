@@ -8,7 +8,7 @@ const char* password = "12345678";
 const char* firmwareUrl = "https://raw.githubusercontent.com/Adityakumar20/test_code/main/test/build/esp32.esp32.esp32/test.ino.bin";
 const char* versionUrl  = "https://raw.githubusercontent.com/Adityakumar20/test_code/main/version.txt";
 
-const char* currentVersion = "v1.0.3";
+const char* currentVersion = "v1.0.4";
 
 unsigned long lastBlink = 0;
 bool ledState = false;
@@ -91,7 +91,7 @@ void setup() {
 }
 
 void loop() {
-  if (millis() - lastBlink > 50) {
+  if (millis() - lastBlink > 152) {
     ledState = !ledState;
     digitalWrite(2, ledState);
     Serial.println(String(currentVersion));
