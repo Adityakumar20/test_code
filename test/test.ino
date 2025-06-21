@@ -6,7 +6,7 @@ const char* ssid = "test";
 const char* password = "12345678";
 
 const char* firmwareUrl = "https://raw.githubusercontent.com/Adityakumar20/test_code/main/test/build/esp32.esp32.esp32/test.ino.bin";
-const char* versionUrl = "https://raw.githubusercontent.com/Adityakumar20/test_code/main/version.txt";
+const char* versionUrl  = "https://raw.githubusercontent.com/Adityakumar20/test_code/main/version.txt";
 
 const char* currentVersion = "v1.0.3";
 
