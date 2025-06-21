@@ -10,7 +10,7 @@ const char* password = "12345678";
 const char* firmwareUrl = "https://raw.githubusercontent.com/Adityakumar20/test_code/main/test/build/esp32.esp32.esp32/test.ino.bin";
 
 // Firmware version (manually increment when you build new)
-const char* firmwareVersion = "v1.0.0";
+const char* firmwareVersion = "v1.0.1";
 
 unsigned long lastBlink = 0;
 bool ledState = false;
@@ -81,10 +81,10 @@ void setup() {
 
 void loop() {
   // Blink LED
-  if (millis() - lastBlink > 1000) {
+  if (millis() - lastBlink > 500) {
     ledState = !ledState;
     digitalWrite(2, ledState);
-    Serial.println("Version 0.4");
+    Serial.println(String(firmwareVersion));
     lastBlink = millis();
   }
 }
