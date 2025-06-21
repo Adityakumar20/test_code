@@ -2,15 +2,13 @@
 #include <HTTPClient.h>
 #include <Update.h>
 
-// WiFi credentials
 const char* ssid = "test";
 const char* password = "12345678";
 
-// OTA firmware location
 const char* firmwareUrl = "https://raw.githubusercontent.com/Adityakumar20/test_code/main/test/build/esp32.esp32.esp32/test.ino.bin";
+const char* versionUrl = "https://raw.githubusercontent.com/Adityakumar20/test_code/main/version.txt";
 
-// Firmware version (manually increment when you build new)
-const char* firmwareVersion = "v1.0.1";
+const char* currentVersion = "v1.0.2";
 
 unsigned long lastBlink = 0;
 bool ledState = false;
@@ -21,7 +19,7 @@ void setup() {
   delay(100);
 
   Serial.println("⏱️ ESP32 Booting...");
-  Serial.println("📦 Current firmware version: " + String(firmwareVersion));
+  Serial.println("📦 Current firmware version: " + String(currentVersion));
 
   // Connect to WiFi
   WiFi.begin(ssid, password);
@@ -32,59 +30,71 @@ void setup() {
   }
   Serial.println("\n✅ WiFi connected");
 
-  // Begin OTA Update
-  Serial.println("🛰️ Starting OTA update check...");
+  // 🔍 Step 1: Check version file
   HTTPClient http;
-  http.begin(firmwareUrl);
+  http.begin(versionUrl);
   int httpCode = http.GET();
 
   if (httpCode == HTTP_CODE_OK) {
-    int contentLength = http.getSize();
-    if (contentLength <= 0) {
-      Serial.println("⚠️ Content-Length not available.");
-      return;
-    }
+    String newVersion = http.getString();
+    newVersion.trim();
 
-    bool canBegin = Update.begin(contentLength);
-    if (!canBegin) {
-      Serial.println("❌ Not enough space to begin OTA.");
-      return;
-    }
+    Serial.println("📥 Online firmware version: " + newVersion);
 
-    WiFiClient* client = http.getStreamPtr();
-    size_t written = Update.writeStream(*client);
+    if (newVersion != currentVersion) {
+      Serial.println("⬆️ Update available! Starting OTA...");
 
-    if (written == contentLength) {
-      Serial.println("✅ OTA written successfully.");
-    } else {
-      Serial.println("❌ OTA write failed.");
-    }
+      // 🔄 Download and apply firmware
+      http.end();
+      http.begin(firmwareUrl);
+      int fwCode = http.GET();
 
-    if (Update.end()) {
-      if (Update.isFinished()) {
-        Serial.println("🚀 OTA update complete. Restarting...");
-        ESP.restart();
+      if (fwCode == HTTP_CODE_OK) {
+        int contentLength = http.getSize();
+        if (Update.begin(contentLength)) {
+          WiFiClient* stream = http.getStreamPtr();
+          size_t written = Update.writeStream(*stream);
+          if (written == contentLength) {
+            Serial.println("✅ OTA written successfully.");
+          } else {
+            Serial.println("❌ OTA write incomplete.");
+          }
+
+          if (Update.end()) {
+            if (Update.isFinished()) {
+              Serial.println("🚀 OTA complete. Restarting...");
+              ESP.restart();
+            } else {
+              Serial.println("⚠️ OTA not finished properly.");
+            }
+          } else {
+            Serial.println("❌ OTA error: " + String(Update.getError()));
+          }
+
+        } else {
+          Serial.println("❌ Not enough space for OTA");
+        }
+
       } else {
-        Serial.println("⚠️ OTA not fully completed.");
+        Serial.println("❌ Firmware download failed. HTTP code: " + String(fwCode));
       }
+
     } else {
-      Serial.printf("❌ OTA error: %d\n", Update.getError());
+      Serial.println("✅ Firmware is up-to-date. No OTA needed.");
     }
 
   } else {
-    Serial.printf("❌ OTA firmware download failed. HTTP code: %d\n", httpCode);
+    Serial.println("❌ Version check failed. HTTP code: " + String(httpCode));
   }
 
   http.end();
-  Serial.println("ℹ️ No OTA update or already latest firmware.");
 }
 
 void loop() {
-  // Blink LED
-  if (millis() - lastBlink > 500) {
+  if (millis() - lastBlink > 300) {
     ledState = !ledState;
     digitalWrite(2, ledState);
-    Serial.println(String(firmwareVersion));
+    Serial.println(String(currentVersion));
     lastBlink = millis();
   }
 }
