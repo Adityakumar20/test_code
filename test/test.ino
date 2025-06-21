@@ -66,10 +66,10 @@ void setup() {
 
 void loop() {
   // Blink LED
-  if (millis() - lastBlink > 200) {
+  if (millis() - lastBlink > 2000) {
     ledState = !ledState;
     digitalWrite(2, ledState);
-    Serial.println("Version 0.2");
+    Serial.println("Version 0.3");
     lastBlink = millis();
   }
 }
