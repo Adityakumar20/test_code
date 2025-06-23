@@ -7,13 +7,14 @@ const char* password = "12345678";
 
 const char* firmwareUrl = "https://raw.githubusercontent.com/Adityakumar20/test_code/main/test/build/esp32.esp32.esp32/test.ino.bin";
 const char* versionUrl = "https://raw.githubusercontent.com/Adityakumar20/test_code/main/version.txt";
-const char* currentVersion = "v1.0.9";  // Update this in code when you release new firmware
+const char* currentVersion = "v1.0.10";  // Update this in code when you release new firmware
 
 unsigned long lastBlink = 0;
 bool ledState = false;
 
 unsigned long lastOTACheck = 0;
 const unsigned long otaInterval = 30000;  // 30 seconds
+int attempt_count = 0;
 
 void setup() {
   pinMode(2, OUTPUT);
@@ -29,13 +30,17 @@ void setup() {
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
+    attempt_count = attempt_count + 1;
+    if (attempt_count > 10) {
+      break;
+    }
   }
   Serial.println("\n✅ WiFi connected");
 }
 
 void loop() {
   // LED Blink
-  if (millis() - lastBlink > 300) {
+  if (millis() - lastBlink > 700) {
     ledState = !ledState;
     digitalWrite(2, ledState);
     lastBlink = millis();
